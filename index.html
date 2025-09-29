@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Workshop - Topic Voting</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .admin-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .connection-status {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 15px 30px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .connection-status.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .connection-status.info {
+            background: #cce7ff;
+            border-color: #99d6ff;
+            color: #004085;
+        }
+        
+        .user-setup {
+            background: #e3f2fd;
+            padding: 20px;
+            border-left: 4px solid #2196f3;
+            margin: 20px 30px;
+            border-radius: 8px;
+        }
+        
+        .user-setup h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .user-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .user-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #bbdefb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .user-input:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+        
+        .set-user-btn {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .current-user {
+            color: #1976d2;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .topic-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .topic-input {
+            flex: 2;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .presenter-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .topic-input:focus, .presenter-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .add-btn {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            align-self: flex-start;
+        }
+        
+        .add-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .add-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .sort-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .sort-btn {
+            padding: 8px 16px;
+            border: 2px solid #dee2e6;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .sort-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .topic-count {
+            color: #6c757d;
+            font-weight: 600;
+        }
+        
+        .topics-list {
+            space-y: 15px;
+        }
+        
+        .topic-item {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .topic-item:hover {
+            background: #e9ecef;
+            border-color: #dee2e6;
+        }
+        
+        .topic-content {
+            flex: 1;
+            margin-right: 20px;
+        }
+        
+        .topic-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .topic-presenter {
+            color: #17a2b8;
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+        
+        .topic-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .voting-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .vote-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .vote-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: #28a745;
+            color: white;
+        }
+        
+        .vote-btn:hover:not(:disabled) {
+            background: #218838;
+            transform: scale(1.1);
+        }
+        
+        .vote-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .vote-count {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #28a745;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .admin-section {
+            display: none;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .admin-title {
+            color: #856404;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .admin-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .admin-topic-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .admin-topic-info {
+            flex: 1;
+        }
+        
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .edit-btn, .delete-btn, .presenter-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .edit-btn {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .presenter-btn {
+            background: #6f42c1;
+            color: white;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .edit-btn:hover {
+            background: #138496;
+        }
+        
+        .presenter-btn:hover {
+            background: #5a32a3;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        
+        .login-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .login-title {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .login-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .login-btn, .cancel-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .login-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .cancel-btn {
+            background: #6c757d;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .topic-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            .voting-section {
+                justify-content: center;
+            }
+            
+            .topic-row {
+                flex-direction: column;
+            }
+            
+            .user-input-group {
+                flex-direction: column;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .admin-toggle {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin-top: 15px;
+            }
+            
+            .admin-topic-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .admin-controls {
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="admin-toggle" onclick="showAdminLogin()">Admin</button>
+            <h1>🚀 PM Workshop</h1>
+            <p>Propose and vote on topics for our upcoming session</p>
+        </div>
+        
+        <div class="connection-status" id="connectionStatus" style="display: none;"></div>
+        
+        <div class="content">
+            <div class="loading" id="loading">
+                <p>🔄 Loading topics from Google Sheets...</p>
+            </div>
+            
+            <div class="user-setup" id="userSetup">
+                <h3>👤 Participant Information</h3>
+                <div class="user-input-group">
+                    <input type="text" class="user-input" id="userNameInput" placeholder="Enter your name to participate..." maxlength="50">
+                    <button class="set-user-btn" onclick="setUser()">Set Name</button>
+                </div>
+            </div>
+            
+            <div class="user-setup" id="currentUserDisplay" style="display: none;">
+                <h3>👤 Logged in as: <span class="current-user" id="currentUserName"></span></h3>
+                <button class="set-user-btn" onclick="changeUser()">Change Name</button>
+            </div>
+            
+            <div class="admin-section" id="adminSection">
+                <div class="admin-header">
+                    <h3 class="admin-title">🔧 Admin Panel</h3>
+                    <button class="admin-close" onclick="hideAdmin()">Close</button>
+                </div>
+                <div id="adminTopicsList"></div>
+            </div>
+            
+            <div class="input-section">
+                <div class="input-group">
+                    <div class="topic-row">
+                        <input type="text" class="topic-input" id="topicInput" placeholder="Enter a topic you'd like to discuss in the workshop..." maxlength="200" disabled>
+                        <input type="text" class="presenter-input" id="presenterInput" placeholder="Who could present this? (optional)" maxlength="100" disabled>
+                    </div>
+                    <button class="add-btn" id="addTopicBtn" onclick="addTopic()" disabled>Add Topic</button>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="sort-controls">
+                    <button class="sort-btn active" onclick="sortTopics('votes')">Sort by Votes</button>
+                    <button class="sort-btn" onclick="sortTopics('recent')">Sort by Recent</button>
+                    <button class="sort-btn" onclick="testConnection()" style="background: #17a2b8; color: white; border-color: #17a2b8;">Test Connection</button>
+                </div>
+                <div class="topic-count" id="topicCount">0 topics</div>
+            </div>
+            
+            <div class="topics-list" id="topicsList">
+                <div class="empty-state">
+                    <h3>No topics yet!</h3>
+                    <p>Set your name above, then be the first to suggest a topic for the PM workshop.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-modal">
+            <h3 class="login-title">🔐 Admin Access</h3>
+            <input type="password" class="login-input" id="adminPassword" placeholder="Enter admin password">
+            <div class="login-buttons">
+                <button class="cancel-btn" onclick="hideAdminLogin()">Cancel</button>
+                <button class="login-btn" onclick="adminLogin()">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Your Google Apps Script Web App URL
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxzPm0ZtMa9vMLh078hFbaMrFHrOdKei0rzzYOQ_88Mr5pDFPyMSqgGvuL4hEDsWkZX/exec';
+        
+        let topics = [];
+        let currentSort = 'votes';
+        let currentUser = '';
+        let isAdmin = false;
+        const adminPassword = 'workshop2024'; // Change this to match your desired password
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTopics();
+        });
+
+        async function makeRequest(url, options = {}) {
+            try {
+                console.log('Making request to:', url);
+                console.log('Options:', options);
+                
+                const response = await fetch(url, {
+                    mode: 'cors',
+                    ...options
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                return data;
+            } catch (error) {
+                console.error('Request failed:', error);
+                showConnectionStatus('Error connecting to Google Sheets: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        async function testConnection() {
+            showConnectionStatus('🔄 Testing connection to Google Sheets...', 'info');
+            
+            try {
+                console.log('Testing connection to:', API_URL);
+                const response = await makeRequest(`${API_URL}?action=getTopics`);
+                
+                if (response.success) {
+                    showConnectionStatus('✅ Connection test successful! Google Sheets is working.', 'success');
+                    console.log('Connection successful, topics:', response.topics);
+                } else {
+                    showConnectionStatus('❌ Connection test failed: ' + response.error, 'error');
+                    console.error('Connection failed:', response.error);
+                }
+            } catch (error) {
+                showConnectionStatus('❌ Connection test failed: ' + error.message, 'error');
+                console.error('Connection test error:', error);
+            }
+        }
+
+        async function loadTopics() {
+            const loadingEl = document.getElementById('loading');
+            loadingEl.classList.add('show');
+            
+            try {
+                console.log('Loading topics from API...');
+                const response = await makeRequest(`${API_URL}?action=getTopics`);
+                
+                if (response.success) {
+                    topics = response.topics.map(topic => ({
+                        ...topic,
+                        timestamp: new Date(topic.timestamp)
+                    }));
+                    console.log('Topics loaded successfully:', topics);
+                    showConnectionStatus('✅ Connected to Google Sheets - ' + topics.length + ' topics loaded', 'success');
+                } else {
+                    throw new Error(response.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('Failed to load topics:', error);
+                showConnectionStatus('⚠️ Unable to connect to Google Sheets. Check console for details. Working in offline mode.', 'error');
+                
+                // Add a click handler to dismiss error and retry
+                const statusEl = document.getElementById('connectionStatus');
+                statusEl.style.cursor = 'pointer';
+                statusEl.title = 'Click to retry connection';
+                statusEl.onclick = () => {
+                    statusEl.onclick = null;
+                    loadTopics();
+                };
+            } finally {
+                loadingEl.classList.remove('show');
+                renderTopics();
+            }
+        }
+
+        function showConnectionStatus(message, type = 'success') {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = message;
+            statusEl.className = `connection-status ${type === 'error' ? 'error' : type === 'info' ? 'info' : ''}`;
+            statusEl.style.display = 'block';
+            
+            // Hide after 5 seconds for success messages only
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
+            // Error and info messages stay visible until manually dismissed or replaced
+        }
+
+        async function setUser() {
+            const input = document.getElementById('userNameInput');
+            const name = input.value.trim();
+            
+            if (!name) {
+                alert('Please enter your name!');
+                return;
+            }
+            
+            currentUser = name;
+            
+            // Log user activity
+            try {
+                await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'logUser',
+                        userName: name
+                    })
+                });
+            } catch (error) {
+                console.error('Failed to log user:', error);
+            }
+            
+            document.getElementById('userSetup').style.display = 'none';
+            document.getElementById('currentUserDisplay').style.display = 'block';
+            document.getElementById('currentUserName').textContent = name;
+            document.getElementById('topicInput').disabled = false;
+            document.getElementById('presenterInput').disabled = false;
+            document.getElementById('addTopicBtn').disabled = false;
+            
+            renderTopics();
+        }
+        
+        function changeUser() {
+            currentUser = '';
+            document.getElementById('userSetup').style.display = 'block';
+            document.getElementById('currentUserDisplay').style.display = 'none';
+            document.getElementById('topicInput').disabled = true;
+            document.getElementById('presenterInput').disabled = true;
+            document.getElementById('addTopicBtn').disabled = true;
+            document.getElementById('userNameInput').value = '';
+            
+            renderTopics();
+        }
+
+        async function addTopic() {
+            if (!currentUser) {
+                alert('Please set your name first!');
+                return;
+            }
+            
+            const topicInput = document.getElementById('topicInput');
+            const presenterInput = document.getElementById('presenterInput');
+            const title = topicInput.value.trim();
+            const presenter = presenterInput.value.trim();
+            
+            if (!title) {
+                alert('Please enter a topic!');
+                return;
+            }
+            
+            if (topics.some(topic => topic.title.toLowerCase() === title.toLowerCase())) {
+                alert('This topic already exists!');
+                return;
+            }
+            
+            const newTopic = {
+                id: Date.now(),
+                title: title,
+                votes: 0,
+                timestamp: new Date(),
+                createdBy: currentUser,
+                voters: [],
+                presenter: presenter
+            };
+            
+            // Add to local array first for immediate feedback
+            topics.push(newTopic);
+            topicInput.value = '';
+            presenterInput.value = '';
+            renderTopics();
+            
+            // Save to Google Sheets
+            try {
+                const response = await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'addTopic',
+                        topic: {
+                            id: newTopic.id,
+                            title: newTopic.title,
+                            createdBy: newTopic.createdBy,
+                            timestamp: newTopic.timestamp.toISOString(),
+                            presenter: newTopic.presenter
+                        }
+                    })
+                });
+                
+                if (!response.success) {
+                    throw new Error(response.error);
+                }
+            } catch (error) {
+                console.error('Failed to save topic:', error);
+                showConnectionStatus('⚠️ Topic added locally but failed to save to Google Sheets', 'error');
+            }
+        }
+
+        async function vote(id) {
+            if (!currentUser) {
+                alert('Please set your name first!');
+                return;
+            }
+            
+            const topic = topics.find(t => t.id === id);
+            if (!topic) return;
+            
+            if (topic.voters.includes(currentUser)) {
+                alert('You have already voted on this topic!');
+                return;
+            }
+            
+            console.log('Voting on topic:', topic.title, 'ID:', id, 'User:', currentUser);
+            
+            // Update locally first for immediate feedback
+            topic.votes += 1;
+            topic.voters.push(currentUser);
+            renderTopics();
+            
+            // Save to Google Sheets
+            try {
+                const payload = {
+                    action: 'vote',
+                    topicId: id,
+                    user: currentUser
+                };
+                
+                console.log('Sending vote payload:', payload);
+                
+                const response = await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log('Vote response:', response);
+                
+                if (!response.success) {
+                    // Revert local changes
+                    topic.votes -= 1;
+                    topic.voters = topic.voters.filter(voter => voter !== currentUser);
+                    renderTopics();
+                    throw new Error(response.error);
+                }
+                
+                showConnectionStatus('✅ Vote saved successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to save vote:', error);
+                showConnectionStatus('⚠️ Vote failed to save to Google Sheets: ' + error.message, 'error');
+            }
+        }
+
+        function sortTopics(type) {
+            currentSort = type;
+            
+            // Update active button
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderTopics();
+        }
+
+        function renderTopics() {
+            const container = document.getElementById('topicsList');
+            const countElement = document.getElementById('topicCount');
+            
+            countElement.textContent = `${topics.length} topic${topics.length !== 1 ? 's' : ''}`;
+            
+            if (topics.length === 0) {
+                const emptyMessage = currentUser 
+                    ? 'No topics yet! Be the first to suggest a topic for the PM workshop.'
+                    : 'Set your name above, then be the first to suggest a topic for the PM workshop.';
+                    
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No topics yet!</h3>
+                        <p>${emptyMessage}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort topics
+            let sortedTopics = [...topics];
+            if (currentSort === 'votes') {
+                sortedTopics.sort((a, b) => b.votes - a.votes);
+            } else {
+                sortedTopics.sort((a, b) => b.timestamp - a.timestamp);
+            }
+            
+            container.innerHTML = sortedTopics.map(topic => {
+                const hasVoted = currentUser && topic.voters.includes(currentUser);
+                const canVote = currentUser && !hasVoted;
+                
+                return `
+                    <div class="topic-item">
+                        <div class="topic-content">
+                            <div class="topic-title">${escapeHtml(topic.title)}</div>
+                            ${topic.presenter ? `<div class="topic-presenter">👤 Presenter: ${escapeHtml(topic.presenter)}</div>` : ''}
+                            <div class="topic-meta">
+                                Added by ${escapeHtml(topic.createdBy)} • ${formatTime(topic.timestamp)}
+                                ${hasVoted ? ' • You voted for this' : ''}
+                            </div>
+                        </div>
+                        <div class="voting-section">
+                            <div class="vote-controls">
+                                <button class="vote-btn" onclick="vote(${topic.id})" ${canVote ? '' : 'disabled'} title="${hasVoted ? 'Already voted' : canVote ? 'Vote for this topic' : 'Set your name to vote'}">
+                                    👍
+                                </button>
+                                <div class="vote-count">${topic.votes}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            renderAdminTopics();
+        }
+
+        function showAdminLogin() {
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('adminPassword').focus();
+        }
+
+        function hideAdminLogin() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === adminPassword) {
+                isAdmin = true;
+                document.getElementById('adminSection').classList.add('active');
+                hideAdminLogin();
+                renderAdminTopics();
+            } else {
+                alert('Incorrect password!');
+            }
+        }
+
+        function hideAdmin() {
+            isAdmin = false;
+            document.getElementById('adminSection').classList.remove('active');
+        }
+
+        function renderAdminTopics() {
+            if (!isAdmin) return;
+            
+            const container = document.getElementById('adminTopicsList');
+            
+            if (topics.length === 0) {
+                container.innerHTML = '<p>No topics to manage.</p>';
+                return;
+            }
+            
+            container.innerHTML = topics.map(topic => `
+                <div class="admin-topic-item">
+                    <div class="admin-topic-info">
+                        <strong>${escapeHtml(topic.title)}</strong><br>
+                        <small>By: ${escapeHtml(topic.createdBy)} | Votes: ${topic.votes} | Voters: ${topic.voters.join(', ')}</small><br>
+                        ${topic.presenter ? `<small style="color: #17a2b8;">👤 Presenter: ${escapeHtml(topic.presenter)}</small>` : '<small style="color: #6c757d;">No presenter assigned</small>'}
+                    </div>
+                    <div class="admin-controls">
+                        <button class="edit-btn" onclick="editTopic(${topic.id})">Edit</button>
+                        <button class="presenter-btn" onclick="editPresenter(${topic.id})">Presenter</button>
+                        <button class="delete-btn" onclick="deleteTopic(${topic.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function editTopic(id) {
+            const topic = topics.find(t => t.id === id);
+            if (!topic) return;
+            
+            const newTitle = prompt('Edit topic:', topic.title);
+            if (!newTitle || !newTitle.trim()) return;
+            
+            const oldTitle = topic.title;
+            topic.title = newTitle.trim();
+            renderTopics();
+            
+            try {
+                const response = await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'editTopic',
+                        topicId: id,
+                        newTitle: newTitle.trim()
+                    })
+                });
+                
+                if (!response.success) {
+                    // Revert changes
+                    topic.title = oldTitle;
+                    renderTopics();
+                    throw new Error(response.error);
+                }
+            } catch (error) {
+                console.error('Failed to edit topic:', error);
+                showConnectionStatus('⚠️ Edit failed to save to Google Sheets', 'error');
+            }
+        }
+
+        async function editPresenter(id) {
+            const topic = topics.find(t => t.id === id);
+            if (!topic) return;
+            
+            const newPresenter = prompt('Set presenter for this topic:', topic.presenter || '');
+            if (newPresenter === null) return; // User cancelled
+            
+            const oldPresenter = topic.presenter;
+            topic.presenter = newPresenter.trim();
+            renderTopics();
+            
+            try {
+                const response = await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'updatePresenter',
+                        topicId: id,
+                        presenter: newPresenter.trim()
+                    })
+                });
+                
+                if (!response.success) {
+                    // Revert changes
+                    topic.presenter = oldPresenter;
+                    renderTopics();
+                    throw new Error(response.error);
+                }
+            } catch (error) {
+                console.error('Failed to update presenter:', error);
+                showConnectionStatus('⚠️ Presenter update failed to save to Google Sheets', 'error');
+            }
+        }
+
+        async function deleteTopic(id) {
+            if (!confirm('Are you sure you want to delete this topic?')) return;
+            
+            const topicIndex = topics.findIndex(t => t.id === id);
+            if (topicIndex === -1) return;
+            
+            const deletedTopic = topics.splice(topicIndex, 1)[0];
+            renderTopics();
+            
+            try {
+                const response = await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'deleteTopic',
+                        topicId: id
+                    })
+                });
+                
+                if (!response.success) {
+                    // Restore deleted topic
+                    topics.splice(topicIndex, 0, deletedTopic);
+                    renderTopics();
+                    throw new Error(response.error);
+                }
+            } catch (error) {
+                console.error('Failed to delete topic:', error);
+                showConnectionStatus('⚠️ Delete failed to save to Google Sheets', 'error');
+            }
+        }
+
+        function formatTime(timestamp) {
+            const now = new Date();
+            const diff = now - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            
+            if (minutes < 1) return 'just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById('topicInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !this.disabled) {
+                addTopic();
+            }
+        });
+
+        document.getElementById('presenterInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !this.disabled) {
+                addTopic();
+            }
+        });
+
+        document.getElementById('userNameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                setUser();
+            }
+        });
+
+        document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                adminLogin();
+            }
+        });
+
+        document.getElementById('loginOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideAdminLogin();
+            }
+        });
+    </script>
+</body>
+</html>
