@@ -673,10 +673,7 @@
                 console.log('Making request to:', url);
                 console.log('Options:', options);
                 
-                const response = await fetch(url, {
-                    mode: 'cors',
-                    ...options
-                });
+                const response = await fetch(url, options);
                 
                 console.log('Response status:', response.status);
                 console.log('Response ok:', response.ok);
