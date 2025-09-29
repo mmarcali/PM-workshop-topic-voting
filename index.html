@@ -289,6 +289,39 @@
             font-size: 0.95rem;
         }
         
+        .topic-notes {
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #495057;
+            white-space: pre-wrap;
+        }
+        
+        .topic-notes.empty {
+            color: #adb5bd;
+            font-style: italic;
+        }
+        
+        .edit-notes-btn {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 4px 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .edit-notes-btn:hover {
+            background: #5568d3;
+        }
+        
         .topic-meta {
             color: #6c757d;
             font-size: 0.9rem;
@@ -622,7 +655,7 @@
 
     <script>
         // Your Google Apps Script Web App URL
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwZ0wzhgxBORq_sNASnuiB2eHMNGL38hglg5YB5R7ICGSxl1B1m5zUUTQB9nKY55K_k/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyJYxEfcNDEnbpfciUEnIM9b5843TCM789M-T4LeyV1GbbBqrlziNFa8ZjLSfzuyNEw/exec';
         
         let topics = [];
         let currentSort = 'votes';
@@ -810,7 +843,8 @@
                 timestamp: new Date(),
                 createdBy: currentUser,
                 voters: [],
-                presenter: presenter
+                presenter: presenter,
+                notes: ''
             };
             
             // Add to local array first for immediate feedback
@@ -952,6 +986,10 @@
                         <div class="topic-content">
                             <div class="topic-title">${escapeHtml(topic.title)}</div>
                             ${topic.presenter ? `<div class="topic-presenter">👤 Presenter: ${escapeHtml(topic.presenter)}</div>` : ''}
+                            <div class="topic-notes ${!topic.notes || !topic.notes.trim() ? 'empty' : ''}">
+                                ${topic.notes && topic.notes.trim() ? escapeHtml(topic.notes) : 'No notes yet'}
+                            </div>
+                            ${currentUser ? `<button class="edit-notes-btn" onclick="editNotes(${topic.id})">📝 Edit Notes</button>` : ''}
                             <div class="topic-meta">
                                 Added by ${escapeHtml(topic.createdBy)} • ${formatTime(topic.timestamp)}
                                 ${hasVoted ? ' • You voted for this' : ''}
@@ -1015,7 +1053,8 @@
                     <div class="admin-topic-info">
                         <strong>${escapeHtml(topic.title)}</strong><br>
                         <small>By: ${escapeHtml(topic.createdBy)} | Votes: ${topic.votes} | Voters: ${topic.voters.join(', ')}</small><br>
-                        ${topic.presenter ? `<small style="color: #17a2b8;">👤 Presenter: ${escapeHtml(topic.presenter)}</small>` : '<small style="color: #6c757d;">No presenter assigned</small>'}
+                        ${topic.presenter ? `<small style="color: #17a2b8;">👤 Presenter: ${escapeHtml(topic.presenter)}</small><br>` : '<small style="color: #6c757d;">No presenter assigned</small><br>'}
+                        ${topic.notes ? `<small style="color: #495057;">📝 Notes: ${escapeHtml(topic.notes)}</small>` : '<small style="color: #adb5bd;">No notes</small>'}
                     </div>
                     <div class="admin-controls">
                         <button class="edit-btn" onclick="editTopic(${topic.id})">Edit</button>
@@ -1095,6 +1134,49 @@
             } catch (error) {
                 console.error('Failed to update presenter:', error);
                 showConnectionStatus('⚠️ Presenter update failed to save to Google Sheets', 'error');
+            }
+        }
+
+        async function editNotes(id) {
+            if (!currentUser) {
+                alert('Please set your name first!');
+                return;
+            }
+            
+            const topic = topics.find(t => t.id === id);
+            if (!topic) return;
+            
+            const newNotes = prompt('Edit notes for this topic:', topic.notes || '');
+            if (newNotes === null) return; // User cancelled
+            
+            const oldNotes = topic.notes;
+            topic.notes = newNotes;
+            renderTopics();
+            
+            try {
+                const response = await makeRequest(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'updateNotes',
+                        topicId: id,
+                        notes: newNotes
+                    })
+                });
+                
+                if (!response.success) {
+                    // Revert changes
+                    topic.notes = oldNotes;
+                    renderTopics();
+                    throw new Error(response.error);
+                }
+                
+                showConnectionStatus('✅ Notes updated successfully!', 'success');
+            } catch (error) {
+                console.error('Failed to update notes:', error);
+                showConnectionStatus('⚠️ Notes update failed to save to Google Sheets', 'error');
             }
         }
 
